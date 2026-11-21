@@ -1,6 +1,6 @@
 from llm_sdk import Small_LLM_Model
-from src import nump as np
 from pathlib import Path
+import numpy as np
 import json
 
 def load_json(path, key):
@@ -31,7 +31,7 @@ def build_dict(model, trie, prompt, names):
 
     while True:
         logits = np.array(model.get_logits_from_input_ids(input_ids))
-        valid_ids = [tid for tid in node if node != "end"]
+        valid_ids = [tid for tid in node if tid != "end"]
         mask = np.full_like(logits, -np.inf)
         mask[valid_ids] = logits[valid_ids]
         pred_tid = int(np.argmax(mask))
@@ -44,12 +44,6 @@ def build_dict(model, trie, prompt, names):
         "prompt" : prompt,
         "name" : node["end"]
     }
-
-def get_key(d, val):
-    for k, v in d.items():
-        if v == val:
-            return k
-    return None
 
 def get_value(model, prompt, key, typ):
     start = '"' if typ == "string" else ""
