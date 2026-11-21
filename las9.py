@@ -1,8 +1,7 @@
 from llm_sdk import Small_LLM_Model
+from src import nump as np
 from pathlib import Path
-import numpy as np 
 import json
-
 
 def load_json(path, key):
     with open(path, "r") as f:
@@ -35,7 +34,7 @@ def build_dict(model, trie, prompt, names):
         valid_ids = [tid for tid in node if node != "end"]
         mask = np.full_like(logits, -np.inf)
         mask[valid_ids] = logits[valid_ids]
-        pred_tid = np.argmax(mask)
+        pred_tid = int(np.argmax(mask))
         node = node[pred_tid]
         if "end" in node:
             break
@@ -45,6 +44,12 @@ def build_dict(model, trie, prompt, names):
         "prompt" : prompt,
         "name" : node["end"]
     }
+
+def get_key(d, val):
+    for k, v in d.items():
+        if v == val:
+            return k
+    return None
 
 def get_value(model, prompt, key, typ):
     start = '"' if typ == "string" else ""
@@ -62,7 +67,7 @@ def get_value(model, prompt, key, typ):
         ids.append(tid)
     return float(text) if typ == "number" else text
 
-def example_request():
+def examples_request():
     return (
   'Request: What is 4 plus 7?\n{"a": 4, "b": 7}\n'
   'Request: Greet bob\n{"name": "bob"}\n'
@@ -72,10 +77,9 @@ def example_request():
 )
 
 def main():
-    print("test1")
+    params = load_json("data/input/functions_definition.json", "parameters")
     prompts = load_json("data/input/function_calling_tests.json", "prompt")
     names = load_json("data/input/functions_definition.json", "name")
-    params = load_json("data/input/functions_definition.json", "parameters")
     model = Small_LLM_Model()
 
     defs = dict(zip(names, params))
@@ -83,14 +87,14 @@ def main():
     result = [build_dict(model, trie, p, names) for p in prompts]
 
     for r in result:
-      examples = example_request()
+      examples = examples_request()
       p = examples + r["prompt"] + "\nFunction: " + r["name"]
       r["parameters"] = {k: get_value(model, p, k, v["type"]) for k, v in defs[r["name"]].items()}
 
-    output_path = Path("data/output2/output13.json")
+    output_path = Path("data/output/output13.json")
     output_path.parent.mkdir(exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(result, f, indent=4)
-    print("test2")
+
 if __name__ == "__main__":
   main()
